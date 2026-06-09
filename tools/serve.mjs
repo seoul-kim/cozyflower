@@ -22,6 +22,7 @@ const TYPES = {
   ".png": "image/png",
   ".json": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
+  ".txt": "text/plain; charset=utf-8",
 };
 
 // 헷갈리는 글자(0/o/1/l 등) 제외한 단축 코드
@@ -114,8 +115,10 @@ function saveMember(name, flowers) {
   return next;
 }
 
-// 공용 데이터 조회: GET .../api/data  → members JSON (읽기는 누구나)
-async function handleDataGet(res) {
+// 공용 데이터 조회: GET .../api/data  (헤더 x-guild-pw = 입장 비번 필요)
+async function handleDataGet(req, res) {
+  const pw = req.headers["x-guild-pw"] || "";
+  if (pw !== GUILD_PW) return sendJson(res, 401, { error: "unauthorized" });
   const members = await readMembers();
   res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
   res.end(JSON.stringify(members));
@@ -150,17 +153,10 @@ createServer(async (req, res) => {
 
     // 서브디렉터리 배포도 견디도록 경로 끝부분으로 매칭
     if (req.method === "GET" && /\/api\/data\/?$/.test(urlPath)) {
-      return await handleDataGet(res);
+      return await handleDataGet(req, res);
     }
     if (req.method === "POST" && /\/api\/member\/?$/.test(urlPath)) {
       return await handleMemberSave(req, res);
-    }
-    if (req.method === "POST" && /\/api\/share\/?$/.test(urlPath)) {
-      return await handleShareCreate(req, res);
-    }
-    const getMatch = urlPath.match(/\/api\/share\/([0-9a-z]+)$/i);
-    if (req.method === "GET" && getMatch) {
-      return await handleShareGet(res, getMatch[1]);
     }
 
     // 정적 파일

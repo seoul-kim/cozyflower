@@ -9,7 +9,17 @@
   <link rel="stylesheet" as="style" crossorigin
         href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css" />
 </head>
-<body>
+<body class="locked">
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <h1>비밀정원 <span class="emoji">🌸</span></h1>
+      <p class="login-sub">길드 비밀번호를 입력하세요</p>
+      <input id="login-pw" type="password" placeholder="비밀번호" autocomplete="current-password" />
+      <button id="login-btn" class="primary">입장하기</button>
+      <p id="login-msg" class="login-msg" aria-live="polite"></p>
+    </div>
+  </div>
+
   <header class="site-header">
     <h1>비밀정원 <span class="emoji">🌸</span></h1>
     <nav class="tabs">
@@ -19,7 +29,6 @@
     <div class="backup">
       <button id="export-btn" class="ghost">백업 내보내기</button>
     </div>
-    <p id="shared-banner" class="shared-banner">🌸 공유받은 꽃 보기 (읽기 전용)</p>
   </header>
 
   <main>

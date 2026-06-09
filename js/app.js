@@ -12,13 +12,12 @@ const FLOWERS_SORTED = [...FLOWERS].sort((a, b) => {
 let viewGrade = "all";
 let inputGrade = "all";
 
-// 데이터 출처 우선순위:
-//   sharedMembers (공유 링크로 열린 읽기전용) > serverMembers (길드 공용 서버) > localStorage(폴백)
-let sharedMembers = null;
-let serverMembers = null; // 서버 공용 데이터. null이면 서버 미사용(로컬 폴백)
+// 길드 공용 데이터 (로그인 후 서버에서 로드). 입장 비번은 1회 입력 후 기기에 기억.
+let serverMembers = null;
 let serverMode = false;
+let guildPw = "";
 function getAllMembers() {
-  return sharedMembers ?? serverMembers ?? store.getAllMembers();
+  return serverMembers ?? store.getAllMembers();
 }
 function getMemberFlowers(name) {
   const entry = getAllMembers()[String(name).trim()];
@@ -161,19 +160,12 @@ function renderView() {
 
 function renderInput() {
   const counts = countByGrade(FLOWERS);
-  const pwField = serverMode
-    ? `<label class="field">
-         <span>길드 비밀번호</span>
-         <input id="guild-pw" type="password" placeholder="길드원에게 공유된 비밀번호" autocomplete="off" />
-       </label>`
-    : "";
   screens.input.innerHTML = `
     <div class="input-form">
       <label class="field">
         <span>닉네임</span>
         <input id="nickname" type="text" placeholder="게임 닉네임" autocomplete="off" />
       </label>
-      ${pwField}
       <button id="save-btn" class="primary">저장하기</button>
       <p id="input-msg" class="msg" aria-live="polite"></p>
       ${chipBarHtml(inputGrade, counts)}
@@ -189,13 +181,9 @@ function renderInput() {
   `;
 
   const nickInput = screens.input.querySelector("#nickname");
-  const pwInput = screens.input.querySelector("#guild-pw");
   const msg = screens.input.querySelector("#input-msg");
   const grid = screens.input.querySelector("#flower-checks");
   const checks = () => [...grid.querySelectorAll("input[type=checkbox]")];
-
-  // 비밀번호는 이 기기에 기억 (한 번 저장하면 다음부터 자동 입력)
-  if (pwInput) pwInput.value = localStorage.getItem("guildPw") || "";
 
   screens.input.querySelector(".grade-chips").addEventListener("click", (e) => {
     const btn = e.target.closest(".chip");
@@ -219,50 +207,29 @@ function renderInput() {
       return;
     }
     const selected = checks().filter((c) => c.checked).map((c) => c.value);
-
-    if (serverMode) {
-      const password = pwInput ? pwInput.value : "";
-      if (!password) {
-        msg.textContent = "길드 비밀번호를 입력해주세요 🔒";
+    const saveBtn = screens.input.querySelector("#save-btn");
+    saveBtn.disabled = true;
+    try {
+      const res = await fetch(apiBase + "api/member", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: guildPw, name, flowers: selected }),
+      });
+      if (res.status === 401) {
+        msg.textContent = "세션이 만료됐어요. 새로고침 후 다시 입장해 주세요 🔒";
         msg.className = "msg error";
         return;
       }
-      const saveBtn = screens.input.querySelector("#save-btn");
-      saveBtn.disabled = true;
-      try {
-        const res = await fetch(apiBase + "api/member", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ password, name, flowers: selected }),
-        });
-        if (res.status === 401) {
-          msg.textContent = "길드 비밀번호가 틀려요 🔒";
-          msg.className = "msg error";
-          return;
-        }
-        if (!res.ok) throw new Error("server " + res.status);
-        const data = await res.json();
-        serverMembers = data.members;
-        localStorage.setItem("guildPw", password);
-        msg.textContent = `${name}님의 꽃을 저장했어요! 💐`;
-        msg.className = "msg success";
-      } catch (e) {
-        msg.textContent = "저장에 실패했어요: " + e.message;
-        msg.className = "msg error";
-      } finally {
-        saveBtn.disabled = false;
-      }
-      return;
-    }
-
-    // 로컬 폴백 (서버 미사용)
-    try {
-      store.saveMember(name, selected);
+      if (!res.ok) throw new Error("server " + res.status);
+      const data = await res.json();
+      serverMembers = data.members;
       msg.textContent = `${name}님의 꽃을 저장했어요! 💐`;
       msg.className = "msg success";
     } catch (e) {
       msg.textContent = "저장에 실패했어요: " + e.message;
       msg.className = "msg error";
+    } finally {
+      saveBtn.disabled = false;
     }
   });
 }
@@ -294,49 +261,57 @@ document.getElementById("export-btn").addEventListener("click", () => {
 // API 기준 경로 (현재 페이지 기준 상대 → 서브디렉터리 배포에도 대응)
 const apiBase = location.pathname.replace(/[^/]*$/, "");
 
-// 공유 링크로 열린 경우: 읽기전용 보기 모드
-//  #s=<코드>  → 서버에서 데이터 조회 (짧은 링크)
-//  #share=... → URL에 담긴 데이터 디코드 (구버전/폴백 링크)
-async function initFromHash() {
-  const hash = location.hash;
-  let m;
-  if ((m = hash.match(/[#&]s=([0-9a-zA-Z]+)/))) {
-    try {
-      const res = await fetch(apiBase + "api/share/" + m[1]);
-      if (!res.ok) throw new Error("not found");
-      sharedMembers = await res.json();
-      document.body.classList.add("shared-readonly");
-    } catch {
-      alert("공유 링크를 찾을 수 없어요. (만료되었거나 잘못된 링크일 수 있어요)");
-    }
-    return;
-  }
-  if ((m = hash.match(/share=([^&]+)/))) {
-    try {
-      sharedMembers = await decodeShare(m[1]);
-      document.body.classList.add("shared-readonly");
-    } catch {
-      alert("공유 링크가 올바르지 않아요.");
-    }
-  }
-}
-
-// 길드 공용 서버 데이터 로드 (성공 시 서버 모드, 실패 시 로컬 폴백)
-async function loadServerData() {
+// ── 입장(로그인) 게이트 ───────────────────────────────────────
+// 입장 시 비번 1회 입력 → 맞으면 데이터 로드 후 입장, 비번은 기기에 기억.
+// 비번이 바뀌면(탈퇴자 대응 등) 다음 접속 때 자동 입장 실패 → 다시 로그인.
+async function tryAuth(pw) {
   try {
-    const res = await fetch(apiBase + "api/data");
-    if (!res.ok) throw new Error("no api");
+    const res = await fetch(apiBase + "api/data", { headers: { "x-guild-pw": pw } });
+    if (!res.ok) return false;
     const data = await res.json();
-    if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("bad");
+    if (!data || typeof data !== "object" || Array.isArray(data)) return false;
     serverMembers = data;
     serverMode = true;
+    guildPw = pw;
+    return true;
   } catch {
-    serverMode = false;
+    return false;
   }
 }
 
-(async () => {
-  await initFromHash();
-  if (!sharedMembers) await loadServerData(); // 공유 링크가 아니면 공용 데이터 로드
+function enterApp() {
+  document.body.classList.remove("locked");
   showScreen("view");
+}
+
+const loginBtn = document.getElementById("login-btn");
+const loginPw = document.getElementById("login-pw");
+const loginMsg = document.getElementById("login-msg");
+async function doLogin() {
+  const pw = loginPw.value;
+  if (!pw) { loginMsg.textContent = "비밀번호를 입력해주세요"; return; }
+  loginBtn.disabled = true;
+  loginMsg.textContent = "확인 중…";
+  if (await tryAuth(pw)) {
+    localStorage.setItem("guildPw", pw);
+    loginMsg.textContent = "";
+    enterApp();
+  } else {
+    loginMsg.textContent = "비밀번호가 틀려요 🔒";
+  }
+  loginBtn.disabled = false;
+}
+if (loginBtn) {
+  loginBtn.addEventListener("click", doLogin);
+  loginPw.addEventListener("keydown", (e) => { if (e.key === "Enter") doLogin(); });
+}
+
+// 시작: 기억된 비번이 있으면 자동 입장, 없거나 틀리면 로그인 화면(body.locked) 유지
+(async () => {
+  const saved = localStorage.getItem("guildPw") || "";
+  if (saved && (await tryAuth(saved))) {
+    enterApp();
+  } else if (loginPw) {
+    loginPw.focus();
+  }
 })();

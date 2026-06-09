@@ -55,14 +55,30 @@ body {
 }
 .import-label { display: inline-flex; align-items: center; }
 
-/* 공유(읽기전용) 모드: 입력 탭·백업/공유 버튼 숨김, 안내 배너 표시 */
-.shared-banner { display: none; }
-body.shared-readonly .tabs,
-body.shared-readonly .backup { display: none; }
-body.shared-readonly .shared-banner {
-  display: block; text-align: center; margin: 6px 0 0;
-  font-size: .9rem; color: var(--pink-deep);
+/* 입장(로그인) 게이트: 비번 통과 전엔 앱을 숨기고 로그인 화면만 표시 */
+.login-screen { display: none; }
+body.locked > .site-header,
+body.locked > main { display: none; }
+body.locked .login-screen {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; padding: 20px;
 }
+.login-card {
+  background: var(--card); border: 2px solid #fff; border-radius: 22px;
+  box-shadow: 3px 3px 0 var(--shadow); padding: 34px 28px; text-align: center;
+  max-width: 340px; width: 100%;
+}
+.login-card h1 {
+  font-size: 2.2rem; font-weight: 800; margin: 0 0 6px;
+  color: var(--pink-deep); text-shadow: 1px 1px 0 #fff;
+}
+.login-sub { margin: 0 0 18px; color: var(--ink); font-size: .95rem; }
+.login-card input {
+  width: 100%; font-family: inherit; font-size: 1rem; text-align: center;
+  padding: 12px; border: 2px solid var(--lav); border-radius: 12px; margin-bottom: 12px;
+}
+.login-card .primary { width: 100%; }
+.login-msg { min-height: 1.2em; color: #d2685a; font-size: .9rem; margin: 12px 0 0; }
 
 .screen { display: none; padding: 16px; max-width: 980px; margin: 0 auto; }
 .screen.active { display: block; }
