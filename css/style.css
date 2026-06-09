@@ -16,7 +16,7 @@ html { font-size: 16px; }
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  font-family: "Jua", "Pretendard Variable", system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-family: "Pretendard Variable", Pretendard, system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   font-size: 1rem;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
