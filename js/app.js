@@ -14,6 +14,7 @@ let viewGrade = "all";
 let inputGrade = "all";
 let viewMember = "all"; // 길드원별 보기 ("all"이면 전체)
 let yieldOpen = true; // 양보 안내 패널 펼침 여부 (기본 펼침)
+const YIELD_ENABLED = false; // 양보 안내 기능 표시 여부 (true로 바꾸면 다시 켜짐)
 
 // 길드 공용 데이터 (로그인 후 서버에서 로드). 입장 비번은 1회 입력 후 기기에 기억.
 let serverMembers = null;
@@ -161,7 +162,7 @@ function renderView() {
     : `<p class="member-title"><span class="owner-tag" data-rank="${rankOf(viewMember)}">${escapeHtml(viewMember)}</span> · ${RANKS[rankOf(viewMember)].label} · 보유 ${visible.length}종</p>`;
 
   screens.view.innerHTML =
-    yieldPanelHtml(all) +
+    (YIELD_ENABLED ? yieldPanelHtml(all) : "") +
     memberBarHtml(viewMember, memberNames) +
     memberTitle +
     chipBarHtml(viewGrade, counts) +
