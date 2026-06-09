@@ -194,8 +194,8 @@ function renderInput() {
   const grid = screens.input.querySelector("#flower-checks");
   const checks = () => [...grid.querySelectorAll("input[type=checkbox]")];
 
-  // 비밀번호는 편의상 이 브라우저 세션에 기억
-  if (pwInput) pwInput.value = sessionStorage.getItem("guildPw") || "";
+  // 비밀번호는 이 기기에 기억 (한 번 저장하면 다음부터 자동 입력)
+  if (pwInput) pwInput.value = localStorage.getItem("guildPw") || "";
 
   screens.input.querySelector(".grade-chips").addEventListener("click", (e) => {
     const btn = e.target.closest(".chip");
@@ -243,7 +243,7 @@ function renderInput() {
         if (!res.ok) throw new Error("server " + res.status);
         const data = await res.json();
         serverMembers = data.members;
-        sessionStorage.setItem("guildPw", password);
+        localStorage.setItem("guildPw", password);
         msg.textContent = `${name}님의 꽃을 저장했어요! 💐`;
         msg.className = "msg success";
       } catch (e) {
