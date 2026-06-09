@@ -16,7 +16,7 @@ export const MEMBER_RANK = {
   "쥴리": "gm",
   "욤뇸뇸뇸욤뇸욤뇸": "vgm",
   "쪼라": "vgm",
-  "챔니": "officer",
+  "챔니": "vgm",
   "샤샤🌸": "officer",
   "킴꽃꽃": "elite",
   "둥이아빠": "elite",

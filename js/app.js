@@ -410,6 +410,16 @@ document.getElementById("export-btn").addEventListener("click", () => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 
+// 로그아웃: 이 기기에 기억된 입장 비번/운영진 비번 지우고 로그인 화면으로
+const logoutBtn = document.getElementById("logout-btn");
+if (logoutBtn) {
+  logoutBtn.addEventListener("click", () => {
+    localStorage.removeItem("guildPw");
+    sessionStorage.removeItem("staffPw");
+    location.reload();
+  });
+}
+
 // API 기준 경로 (현재 페이지 기준 상대 → 서브디렉터리 배포에도 대응)
 const apiBase = location.pathname.replace(/[^/]*$/, "");
 
