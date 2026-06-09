@@ -1,6 +1,7 @@
 import { FLOWERS } from "./flowers.js";
 import { store } from "./store.js";
 import { membersWithFlower, countByGrade } from "./aggregate.js";
+import { RANKS, RANK_ORDER, rankOf } from "./ranks.js";
 
 // 정렬본 (보기/입력 공통): 등급 우선(빨간꽃 UR → 노란꽃 SSR), 같은 등급 내 가나다 순
 const GRADE_ORDER = { UR: 0, SSR: 1, SR: 2 };
@@ -11,11 +12,14 @@ const FLOWERS_SORTED = [...FLOWERS].sort((a, b) => {
 
 let viewGrade = "all";
 let inputGrade = "all";
+let viewMember = "all"; // 길드원별 보기 ("all"이면 전체)
+let yieldOpen = true; // 양보 안내 패널 펼침 여부 (기본 펼침)
 
 // 길드 공용 데이터 (로그인 후 서버에서 로드). 입장 비번은 1회 입력 후 기기에 기억.
 let serverMembers = null;
 let serverMode = false;
 let guildPw = "";
+let priorityMap = {}; // { flowerId: 우선 진행자 닉네임 }
 function getAllMembers() {
   return serverMembers ?? store.getAllMembers();
 }
@@ -127,13 +131,43 @@ function getVisibleFlowers() {
     .filter((v) => v.owners.length > 0);
 }
 
+// 길드원 드롭다운 + 등급 색 범례
+function memberBarHtml(activeMember, memberNames) {
+  const opts = [`<option value="all"${activeMember === "all" ? " selected" : ""}>전체 보기</option>`]
+    .concat(memberNames.map((n) =>
+      `<option value="${escapeHtml(n)}"${n === activeMember ? " selected" : ""}>${escapeHtml(n)} · ${RANKS[rankOf(n)].label}</option>`));
+  const legend = Object.entries(RANKS)
+    .map(([k, r]) => `<span class="rank-tag" data-rank="${k}">${r.label}</span>`).join("");
+  return `<div class="member-bar">
+      <label>길드원별 <select id="member-filter">${opts.join("")}</select></label>
+      <div class="rank-legend">${legend}</div>
+    </div>`;
+}
+
 function renderView() {
-  const visible = getVisibleFlowers();
+  const all = getAllMembers();
+  // 데이터에 꽃이 있는 길드원 목록 (등급 → 이름 순 정렬)
+  const memberNames = Object.keys(all)
+    .filter((n) => Array.isArray(all[n]?.flowers) && all[n].flowers.length > 0)
+    .sort((a, b) => (RANK_ORDER[rankOf(a)] - RANK_ORDER[rankOf(b)]) || a.localeCompare(b, "ko"));
+  if (viewMember !== "all" && !memberNames.includes(viewMember)) viewMember = "all";
+
+  let visible = getVisibleFlowers();
+  if (viewMember !== "all") visible = visible.filter((v) => v.owners.includes(viewMember));
   const counts = countByGrade(visible.map((v) => v.flower));
+
+  const memberTitle = viewMember === "all"
+    ? ""
+    : `<p class="member-title"><span class="owner-tag" data-rank="${rankOf(viewMember)}">${escapeHtml(viewMember)}</span> · ${RANKS[rankOf(viewMember)].label} · 보유 ${visible.length}종</p>`;
+
   screens.view.innerHTML =
+    yieldPanelHtml(all) +
+    memberBarHtml(viewMember, memberNames) +
+    memberTitle +
     chipBarHtml(viewGrade, counts) +
     `<div class="flower-grid${viewGrade === "all" ? "" : " filter-" + viewGrade}"></div>`;
   const grid = screens.view.querySelector(".flower-grid");
+  wireYieldPanel(screens.view);
 
   for (const { flower, owners } of visible) {
     const card = document.createElement("article");
@@ -144,18 +178,136 @@ function renderView() {
       <h3 class="flower-name">${flower.name}</h3>
       <p class="owner-count">${owners.length}명 보유</p>
       <ul class="owner-list">
-        ${owners.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}
+        ${owners.map((n) => `<li class="owner-tag" data-rank="${rankOf(n)}">${escapeHtml(n)}</li>`).join("")}
       </ul>
     `;
     grid.appendChild(card);
   }
 
+  screens.view.querySelector("#member-filter").addEventListener("change", (e) => {
+    viewMember = e.target.value;
+    renderView();
+  });
   screens.view.querySelector(".grade-chips").addEventListener("click", (e) => {
     const btn = e.target.closest(".chip");
     if (!btn) return;
     viewGrade = btn.dataset.grade;
     renderView();
   });
+}
+
+// 양보 안내 패널 HTML — 2명 이상이 가진 꽃 + 우선 진행자(👑). 접이식(기본 펼침).
+function yieldPanelHtml(all) {
+  const multi = FLOWERS_SORTED
+    .map((flower) => ({ flower, owners: membersWithFlower(all, flower.id) }))
+    .filter((v) => v.owners.length >= 2);
+  if (!multi.length) return ""; // 겹치는 꽃 없으면 패널 자체를 숨김
+
+  const staff = isStaff();
+  const rows = multi.map(({ flower, owners }) => {
+    const pri = priorityMap[flower.id];
+    const hasPri = pri && owners.includes(pri);
+    // 우선 진행자가 정해지면 그 사람만 표시 (나머지 소유자 숨김). 미정이면 전원 표시.
+    const shown = hasPri ? [pri] : owners;
+    const chips = shown.map((n) => {
+      const isPri = pri === n;
+      return `<li class="owner-tag${isPri ? " is-priority" : ""}" data-rank="${rankOf(n)}" data-flower="${escapeHtml(flower.id)}" data-member="${escapeHtml(n)}">${isPri ? "👑 " : ""}${escapeHtml(n)}</li>`;
+    }).join("");
+    return `<div class="yield-card" data-grade="${flower.grade}">
+        <img class="yield-img" src="${flower.image}" alt="${flower.name}" />
+        <div class="yield-info">
+          <h3 class="flower-name">${flower.name}</h3>
+          <ul class="owner-list">${chips}</ul>
+        </div>
+      </div>`;
+  }).join("");
+
+  return `<section class="yield-panel${yieldOpen ? "" : " collapsed"}">
+      <button class="yield-head" id="yield-toggle" aria-expanded="${yieldOpen}">
+        <span>🌷 다수 소유자 양보 안내 <em>${multi.length}</em></span>
+        <span class="yield-arrow">${yieldOpen ? "▲" : "▼"}</span>
+      </button>
+      <div class="yield-body">
+        <p class="yield-desc">같은 꽃을 여러 명이 가졌어요. <b>우선 진행자(👑)</b>가 먼저 진행하고 나머지는 양보해 주세요.${staff ? " 소유자를 눌러 지정 · 👑을 다시 누르면 해제." : ""}
+          ${staff ? `<button class="ghost staff-btn" id="staff-lock">🔓 운영진 모드 ON · 잠그기</button>`
+                  : `<button class="ghost staff-btn" id="staff-unlock">🔑 운영진 모드 (양보 지정)</button>`}
+        </p>
+        <div class="yield-list">${rows}</div>
+      </div>
+    </section>`;
+}
+
+function isStaff() {
+  return !!sessionStorage.getItem("staffPw");
+}
+
+// 양보 패널 이벤트 연결 (renderView에서 호출)
+function wireYieldPanel(container) {
+  const toggle = container.querySelector("#yield-toggle");
+  if (toggle) {
+    toggle.addEventListener("click", () => {
+      yieldOpen = !yieldOpen;
+      const panel = container.querySelector(".yield-panel");
+      panel.classList.toggle("collapsed", !yieldOpen);
+      toggle.setAttribute("aria-expanded", String(yieldOpen));
+      container.querySelector(".yield-arrow").textContent = yieldOpen ? "▲" : "▼";
+    });
+  }
+  const unlock = container.querySelector("#staff-unlock");
+  if (unlock) unlock.addEventListener("click", unlockStaff);
+  const lock = container.querySelector("#staff-lock");
+  if (lock) lock.addEventListener("click", () => { sessionStorage.removeItem("staffPw"); renderView(); });
+
+  const list = container.querySelector(".yield-list");
+  if (list) {
+    list.addEventListener("click", (e) => {
+      const li = e.target.closest(".owner-tag");
+      if (!li) return;
+      if (!isStaff()) { alert("양보(우선 진행자) 지정은 운영진만 가능해요. '운영진 모드'를 켜주세요 🔑"); return; }
+      const flowerId = li.dataset.flower;
+      const member = li.dataset.member;
+      setPriority(flowerId, priorityMap[flowerId] === member ? "" : member);
+    });
+  }
+}
+
+async function unlockStaff() {
+  const pw = window.prompt("운영진 비밀번호를 입력하세요");
+  if (!pw) return;
+  try {
+    const res = await fetch(apiBase + "api/staff-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: pw }),
+    });
+    if (!res.ok) { alert("운영진 비밀번호가 틀려요 🔒"); return; }
+    sessionStorage.setItem("staffPw", pw);
+    renderView();
+  } catch (e) {
+    alert("확인 실패: " + e.message);
+  }
+}
+
+async function setPriority(flowerId, member) {
+  try {
+    const res = await fetch(apiBase + "api/priority", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: sessionStorage.getItem("staffPw") || "", flowerId, member }),
+    });
+    if (res.status === 401) {
+      alert("운영진 비밀번호가 만료됐어요. 다시 운영진 모드를 켜주세요 🔒");
+      sessionStorage.removeItem("staffPw");
+      renderView();
+      return;
+    }
+    if (!res.ok) throw new Error("server " + res.status);
+    const data = await res.json();
+    priorityMap = data.priority || {};
+    renderView();
+  } catch (e) {
+    alert("우선 진행자 저장에 실패했어요: " + e.message);
+  }
 }
 
 function renderInput() {
@@ -273,6 +425,10 @@ async function tryAuth(pw) {
     serverMembers = data;
     serverMode = true;
     guildPw = pw;
+    try {
+      const pr = await fetch(apiBase + "api/priority", { headers: { "x-guild-pw": pw } });
+      priorityMap = pr.ok ? await pr.json() : {};
+    } catch { priorityMap = {}; }
     return true;
   } catch {
     return false;

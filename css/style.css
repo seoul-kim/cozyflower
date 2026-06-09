@@ -11,6 +11,12 @@
   --ur: #e8607a;
   --ssr: #f4c84a;
   --sr: #a974d4;
+  /* 길드원 등급 딱지색: 길마=빨강, 부길마=노랑, 임원=보라, 정예=파랑, 일반=초록 */
+  --rank-gm: #e25f6e;
+  --rank-vgm: #f4c84a;
+  --rank-officer: #a974d4;
+  --rank-elite: #5b9bd5;
+  --rank-general: #8fc079;
 }
 html { font-size: 16px; }
 * { box-sizing: border-box; }
@@ -99,11 +105,70 @@ body.locked .login-screen {
 .flower-name { font-size: 1.05rem; margin: 8px 0 2px; }
 .owner-count { font-size: .8rem; color: var(--pink-deep); margin: 0 0 6px; }
 .owner-list { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
-.owner-list li {
-  background: var(--lav); color: #fff; border-radius: 999px;
-  padding: 2px 10px; font-size: .82rem;
+.owner-list li.empty { background: transparent; color: #b9a9c8; border-radius: 999px; padding: 2px 10px; font-size: .82rem; }
+
+/* 길드원 딱지 — 등급별 색 */
+.owner-tag {
+  display: inline-block; border-radius: 999px; padding: 2px 10px;
+  font-size: .82rem; background: var(--rank-general); color: #fff;
 }
-.owner-list li.empty { background: transparent; color: #b9a9c8; }
+.owner-tag[data-rank="gm"]      { background: var(--rank-gm); color: #fff; }
+.owner-tag[data-rank="vgm"]     { background: var(--rank-vgm); color: #7a5a2a; }
+.owner-tag[data-rank="officer"] { background: var(--rank-officer); color: #fff; }
+.owner-tag[data-rank="elite"]   { background: var(--rank-elite); color: #fff; }
+.owner-tag[data-rank="general"] { background: var(--rank-general); color: #fff; }
+
+/* 길드원별 보기 드롭다운 + 등급 범례 */
+.member-bar { text-align: center; margin: 0 0 12px; }
+.member-bar label { font-size: .95rem; color: var(--ink); }
+.member-bar select {
+  font-family: inherit; font-size: .95rem; padding: 6px 12px; margin-left: 6px;
+  border: 2px solid var(--lav); border-radius: 12px; background: #fff; color: var(--ink);
+  box-shadow: 2px 2px 0 var(--shadow); cursor: pointer; max-width: 60vw;
+}
+.rank-legend { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 10px; }
+.rank-tag {
+  font-size: .72rem; border-radius: 999px; padding: 2px 9px; color: #fff;
+}
+.rank-tag[data-rank="gm"]      { background: var(--rank-gm); }
+.rank-tag[data-rank="vgm"]     { background: var(--rank-vgm); color: #7a5a2a; }
+.rank-tag[data-rank="officer"] { background: var(--rank-officer); }
+.rank-tag[data-rank="elite"]   { background: var(--rank-elite); }
+.rank-tag[data-rank="general"] { background: var(--rank-general); }
+.member-title { text-align: center; margin: 0 0 12px; font-size: .95rem; color: var(--ink); }
+
+/* 양보 안내 — 꽃 보기 메인 상단 접이식 패널 */
+.yield-panel {
+  background: #fff5f7; border: 2px solid var(--pink); border-radius: 18px;
+  box-shadow: 3px 3px 0 var(--shadow); margin: 0 0 16px; overflow: hidden;
+}
+.yield-head {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  font-family: inherit; font-size: 1.05rem; font-weight: 700; color: var(--pink-deep);
+  background: transparent; border: none; cursor: pointer; padding: 14px 16px;
+}
+.yield-head em { font-style: normal; font-size: .85rem; background: var(--pink-deep); color: #fff; border-radius: 999px; padding: 1px 9px; margin-left: 4px; }
+.yield-arrow { font-size: .8rem; color: var(--pink-deep); }
+.yield-body { padding: 0 16px 16px; }
+.yield-panel.collapsed .yield-body { display: none; }
+.yield-desc { font-size: .88rem; color: var(--ink); margin: 0 0 12px; }
+.staff-btn { display: inline-block; margin-left: 4px; font-size: .8rem; }
+.yield-list { display: flex; flex-direction: column; gap: 10px; }
+.yield-card {
+  display: flex; gap: 12px; align-items: center;
+  background: var(--card); border: 2px solid #fff; border-radius: 16px;
+  box-shadow: 2px 2px 0 var(--shadow); padding: 10px 12px;
+}
+.yield-img { width: 64px; height: 64px; object-fit: cover; border-radius: 12px; flex: 0 0 auto; background: #fbeef2; }
+.yield-info { flex: 1 1 auto; min-width: 0; }
+.yield-info .flower-name { margin: 0 0 8px; }
+.yield-info .owner-list { justify-content: flex-start; }
+.yield-card .owner-tag { cursor: pointer; }
+.yield-card .owner-tag.is-priority { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #ffb43d; font-weight: 700; }
+.yield-card[data-grade="UR"] .flower-name { background: var(--ur); color: #fff; }
+.yield-card[data-grade="SSR"] .flower-name { background: var(--ssr); color: #7a5a2a; }
+.yield-card[data-grade="SR"] .flower-name { background: var(--sr); color: #fff; }
+.yield-empty { text-align: center; color: var(--ink); padding: 30px 0; }
 
 .input-form { max-width: 720px; margin: 0 auto; }
 .field { display: block; margin-bottom: 10px; }
