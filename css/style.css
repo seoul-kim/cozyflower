@@ -10,12 +10,13 @@
   --shadow: rgba(120, 100, 90, 0.18);
   --ur: #e8607a;
   --ssr: #f4c84a;
+  --sr: #a974d4;
 }
 html { font-size: 16px; }
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  font-family: "Pretendard Variable", Pretendard, system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-family: "Jua", "Pretendard Variable", system-ui, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   font-size: 1rem;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -46,7 +47,7 @@ body {
   box-shadow: 2px 2px 0 var(--shadow);
 }
 .tab.active { background: var(--lav); color: #fff; }
-.backup { display: flex; gap: 8px; justify-content: center; margin-bottom: 8px; }
+.backup { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 8px; padding-right: 4px; }
 .ghost {
   font-family: inherit; font-size: .85rem; cursor: pointer;
   border: 1.5px dashed var(--green); background: transparent; color: var(--ink);
@@ -125,6 +126,7 @@ body.shared-readonly .shared-banner {
 .chip.active { background: var(--lav); color: #fff; }
 .chip[data-grade="UR"].active { background: var(--ur); border-color: var(--ur); color: #fff; }
 .chip[data-grade="SSR"].active { background: var(--ssr); border-color: var(--ssr); color: #7a5a2a; }
+.chip[data-grade="SR"].active { background: var(--sr); border-color: var(--sr); color: #fff; }
 
 /* 이름 알약(등급색) — 최대 2줄, 넘치면 말줄임 */
 .flower-name, .check-item span {
@@ -147,9 +149,13 @@ body.shared-readonly .shared-banner {
 .check-item[data-grade="UR"] span { background: var(--ur); color: #fff; }
 .flower-card[data-grade="SSR"] .flower-name,
 .check-item[data-grade="SSR"] span { background: var(--ssr); color: #7a5a2a; }
+.flower-card[data-grade="SR"] .flower-name,
+.check-item[data-grade="SR"] span { background: var(--sr); color: #fff; }
 
 /* 등급 필터 숨김 */
 .flower-grid.filter-UR .flower-card:not([data-grade="UR"]),
 .flower-grid.filter-SSR .flower-card:not([data-grade="SSR"]),
+.flower-grid.filter-SR .flower-card:not([data-grade="SR"]),
 .checkbox-grid.filter-UR .check-item:not([data-grade="UR"]),
-.checkbox-grid.filter-SSR .check-item:not([data-grade="SSR"]) { display: none; }
+.checkbox-grid.filter-SSR .check-item:not([data-grade="SSR"]),
+.checkbox-grid.filter-SR .check-item:not([data-grade="SR"]) { display: none; }

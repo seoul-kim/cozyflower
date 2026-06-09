@@ -1,10 +1,9 @@
 import { FLOWERS } from "./flowers.js";
 import { store } from "./store.js";
 import { membersWithFlower, countByGrade } from "./aggregate.js";
-import { downloadViewImage } from "./snapshot.js";
 
 // 정렬본 (보기/입력 공통): 등급 우선(빨간꽃 UR → 노란꽃 SSR), 같은 등급 내 가나다 순
-const GRADE_ORDER = { UR: 0, SSR: 1 };
+const GRADE_ORDER = { UR: 0, SSR: 1, SR: 2 };
 const FLOWERS_SORTED = [...FLOWERS].sort((a, b) => {
   const byGrade = (GRADE_ORDER[a.grade] ?? 9) - (GRADE_ORDER[b.grade] ?? 9);
   return byGrade !== 0 ? byGrade : a.name.localeCompare(b.name, "ko");
@@ -97,6 +96,7 @@ function chipBarHtml(active, counts) {
     ["all", `전체 ${counts.all}`],
     ["UR", `🔴 빨간꽃 ${counts.UR}`],
     ["SSR", `🟡 노란꽃 ${counts.SSR}`],
+    ["SR", `🟣 보라꽃 ${counts.SR}`],
   ];
   return `<div class="grade-chips">` +
     defs.map(([k, l]) => `<button class="chip${active === k ? " active" : ""}" data-grade="${k}">${l}</button>`).join("") +
@@ -174,6 +174,7 @@ function renderInput() {
         <input id="nickname" type="text" placeholder="게임 닉네임" autocomplete="off" />
       </label>
       ${pwField}
+      <button id="save-btn" class="primary">저장하기</button>
       <p id="input-msg" class="msg" aria-live="polite"></p>
       ${chipBarHtml(inputGrade, counts)}
       <div class="checkbox-grid${inputGrade === "all" ? "" : " filter-" + inputGrade}" id="flower-checks">
@@ -184,7 +185,6 @@ function renderInput() {
             <span>${f.name}</span>
           </label>`).join("")}
       </div>
-      <button id="save-btn" class="primary">저장하기</button>
     </div>
   `;
 
@@ -291,77 +291,8 @@ document.getElementById("export-btn").addEventListener("click", () => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
 
-document.getElementById("import-file").addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      store.importData(String(reader.result));
-      alert("불러오기 완료! 💾");
-      showScreen("view");
-    } catch (err) {
-      alert("불러오기 실패: 올바른 백업 파일이 아니에요.");
-    }
-    e.target.value = "";
-  };
-  reader.readAsText(file);
-});
-
-// 이미지로 저장 (호스팅 불필요 — 꽃 보기 전체를 PNG 한 장으로)
-const imageBtn = document.getElementById("image-btn");
-if (imageBtn) {
-  imageBtn.addEventListener("click", async () => {
-    const visible = getVisibleFlowers();
-    if (!visible.length) {
-      alert("아직 보유한 꽃이 없어요 🌱");
-      return;
-    }
-    const prev = imageBtn.textContent;
-    imageBtn.disabled = true;
-    imageBtn.textContent = "🖼 그리는 중…";
-    try {
-      await downloadViewImage(visible);
-    } catch (e) {
-      alert("이미지 저장에 실패했어요: " + e.message);
-    } finally {
-      imageBtn.disabled = false;
-      imageBtn.textContent = prev;
-    }
-  });
-}
-
 // API 기준 경로 (현재 페이지 기준 상대 → 서브디렉터리 배포에도 대응)
 const apiBase = location.pathname.replace(/[^/]*$/, "");
-
-// 공유 링크 복사 (소유자용): 서버에 저장하고 짧은 코드 링크 발급.
-// 서버 API가 없으면(정적 호스팅 등) 데이터를 통째로 담는 긴 링크로 자동 폴백.
-const shareBtn = document.getElementById("share-btn");
-if (shareBtn) {
-  shareBtn.addEventListener("click", async () => {
-    let url;
-    try {
-      const res = await fetch(apiBase + "api/share", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(getAllMembers()),
-      });
-      if (!res.ok) throw new Error("api");
-      const { code } = await res.json();
-      if (!code) throw new Error("api");
-      url = location.origin + location.pathname + "#s=" + code;
-    } catch {
-      // 폴백: 자체 완결형(긴) 링크
-      url = location.origin + location.pathname + "#share=" + (await encodeShare(getAllMembers()));
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      alert("꽃 보기 공유 링크를 복사했어요! 🔗\n받는 사람은 이 링크를 열면 보기 전용으로 볼 수 있어요.");
-    } catch {
-      window.prompt("아래 링크를 복사해서 공유하세요 (Ctrl+C):", url);
-    }
-  });
-}
 
 // 공유 링크로 열린 경우: 읽기전용 보기 모드
 //  #s=<코드>  → 서버에서 데이터 조회 (짧은 링크)
