@@ -146,4 +146,6 @@ export const FLOWERS = [
   { id: "flower-141", name: "따스한 여름 햇살", image: "https://cdn.jsdelivr.net/gh/seoul-kim/cozyflower@main/assets/flowers/flower-141.png", grade: "SR" },
   { id: "flower-142", name: "연지빛 개양귀비", image: "https://cdn.jsdelivr.net/gh/seoul-kim/cozyflower@main/assets/flowers/flower-142.png", grade: "SR" },
   { id: "flower-143", name: "창공빛 산호초", image: "https://cdn.jsdelivr.net/gh/seoul-kim/cozyflower@main/assets/flowers/flower-143.png", grade: "SR" },
+  { id: "flower-144", name: "파도 타는 여름 마녀", image: "https://cdn.jsdelivr.net/gh/seoul-kim/cozyflower@main/assets/flowers/flower-144.png", grade: "UR" },
+  { id: "flower-145", name: "해변 오리의 시원한 여름", image: "https://cdn.jsdelivr.net/gh/seoul-kim/cozyflower@main/assets/flowers/flower-145.png", grade: "SSR" },
 ];
