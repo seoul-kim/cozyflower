@@ -175,7 +175,7 @@ function renderView() {
     card.className = "flower-card";
     card.dataset.grade = flower.grade;
     card.innerHTML = `
-      <img class="flower-img" src="${flower.image}" alt="${flower.name}" />
+      <img class="flower-img" src="${flower.image}" alt="${flower.name}" loading="lazy" />
       <h3 class="flower-name">${flower.name}</h3>
       <p class="owner-count">${owners.length}명 보유</p>
       <ul class="owner-list">
@@ -326,7 +326,7 @@ function renderInput() {
         ${FLOWERS_SORTED.map((f) => `
           <label class="check-item" data-grade="${f.grade}">
             <input type="checkbox" value="${f.id}" />
-            <img src="${f.image}" alt="${f.name}" />
+            <img src="${f.image}" alt="${f.name}" loading="lazy" />
             <span>${f.name}</span>
           </label>`).join("")}
       </div>
