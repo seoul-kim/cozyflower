@@ -3,12 +3,17 @@ import { store } from "./store.js";
 import { membersWithFlower, countByGrade } from "./aggregate.js";
 import { RANKS, RANK_ORDER, rankOf } from "./ranks.js";
 
-// 정렬본 (보기/입력 공통): 등급 우선(빨간꽃 UR → 노란꽃 SSR), 같은 등급 내 가나다 순
+// 화면에서 숨길 등급 (비우면 전부 표시). 보라꽃(SR) 다시 보이게 하려면 이 Set을 비우세요: new Set()
+const HIDDEN_GRADES = new Set(["SR"]);
+
+// 정렬본 (보기/입력 공통): 등급 우선(빨간꽃 UR → 노란꽃 SSR), 같은 등급 내 가나다 순. 숨긴 등급 제외.
 const GRADE_ORDER = { UR: 0, SSR: 1, SR: 2 };
-const FLOWERS_SORTED = [...FLOWERS].sort((a, b) => {
-  const byGrade = (GRADE_ORDER[a.grade] ?? 9) - (GRADE_ORDER[b.grade] ?? 9);
-  return byGrade !== 0 ? byGrade : a.name.localeCompare(b.name, "ko");
-});
+const FLOWERS_SORTED = [...FLOWERS]
+  .filter((f) => !HIDDEN_GRADES.has(f.grade))
+  .sort((a, b) => {
+    const byGrade = (GRADE_ORDER[a.grade] ?? 9) - (GRADE_ORDER[b.grade] ?? 9);
+    return byGrade !== 0 ? byGrade : a.name.localeCompare(b.name, "ko");
+  });
 
 let viewGrade = "all";
 let inputGrade = "all";
@@ -101,7 +106,7 @@ function chipBarHtml(active, counts) {
     ["UR", `🔴 빨간꽃 ${counts.UR}`],
     ["SSR", `🟡 노란꽃 ${counts.SSR}`],
     ["SR", `🟣 보라꽃 ${counts.SR}`],
-  ];
+  ].filter(([k]) => k === "all" || !HIDDEN_GRADES.has(k));
   return `<div class="grade-chips">` +
     defs.map(([k, l]) => `<button class="chip${active === k ? " active" : ""}" data-grade="${k}">${l}</button>`).join("") +
     `</div>`;
@@ -312,7 +317,7 @@ async function setPriority(flowerId, member) {
 }
 
 function renderInput() {
-  const counts = countByGrade(FLOWERS);
+  const counts = countByGrade(FLOWERS_SORTED);
   screens.input.innerHTML = `
     <div class="input-form">
       <label class="field">
